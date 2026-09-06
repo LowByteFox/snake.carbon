@@ -7,6 +7,13 @@ import Cpp library "<string_view>";
 import Cpp library "raylib/include/raylib.h";
 
 import Cpp inline '''
+/* Carbon doesn't handle enums yet? */
+#define RL_KEY_ENTER 257
+#define RL_KEY_RIGHT 262
+#define RL_KEY_LEFT 263
+#define RL_KEY_DOWN 264
+#define RL_KEY_UP 265
+
 #define SNAKE_LEN 256
 #define SQUARE_SZ 31
 ''';
@@ -38,7 +45,7 @@ impl Types.Color as Core.As(Cpp.Color) {
 let SCREEN_WIDTH: i32 = 800;
 let SCREEN_HEIGHT: i32 = 450;
 
-var frames_counter: i32 = 0;
+var frame_counter: i32 = 0;
 var game_over: bool = false;
 var pause: bool = false;
 
@@ -46,15 +53,12 @@ var fruit: Types.Food;
 var snake: array(Types.Snake, Cpp.SNAKE_LEN);
 var snake_position: array(Types.Vec2, Cpp.SNAKE_LEN);
 
-var allow_move: bool = false;
 var offset: Types.Vec2;
 var tail_counter: i32 = 1;
 
 fn init_game();
 fn update_game();
 fn draw_game();
-fn unload_game();
-fn update_and_draw_game();
 
 fn Run() { 
     Cpp.InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, Cpp.std.data("Snake\0"));
@@ -63,12 +67,82 @@ fn Run() {
     Cpp.SetTargetFPS(60);
 
     while (not Cpp.WindowShouldClose()) {
+        update_game();
         Cpp.BeginDrawing();
         draw_game();
         Cpp.EndDrawing();
     }
 
     Cpp.CloseWindow();
+}
+
+fn update_game()
+{
+    var allow_move: bool = true;
+
+    if (game_over) {
+        if (Cpp.IsKeyPressed(Cpp.RL_KEY_ENTER)) {
+            game_over = false;
+            init_game();
+        }
+        return;
+    }
+
+    if (Cpp.IsKeyPressed('P' as i32)) {
+        pause = not pause;
+    }
+
+    if (pause) {
+        return;
+    }
+
+    if (Cpp.IsKeyPressed(Cpp.RL_KEY_RIGHT) and (snake[0].speed.x == 0) and 
+        allow_move) {
+        snake[0].speed = { .x = Cpp.SQUARE_SZ, .y = 0 };
+        allow_move = false;
+    }
+
+    if (Cpp.IsKeyPressed(Cpp.RL_KEY_LEFT) and (snake[0].speed.x == 0) and 
+        allow_move) {
+        snake[0].speed = { .x = -Cpp.SQUARE_SZ, .y = 0 };
+        allow_move = false;
+    }
+
+    if (Cpp.IsKeyPressed(Cpp.RL_KEY_UP) and (snake[0].speed.y == 0) and 
+        allow_move) {
+        snake[0].speed = { .x = 0, .y = -Cpp.SQUARE_SZ };
+        allow_move = false;
+    }
+
+    if (Cpp.IsKeyPressed(Cpp.RL_KEY_DOWN) and (snake[0].speed.y == 0) and 
+        allow_move) {
+        snake[0].speed = { .x = 0, .y = Cpp.SQUARE_SZ };
+        allow_move = false;
+    }
+
+    for (i: i32 in Core.Range(Cpp.SNAKE_LEN)) {
+        snake_position[i] = snake[i].position;
+    }
+
+    if (frame_counter % 5 == 0) {
+        for (i: i32 in Core.Range(tail_counter)) {
+            if (i == 0) {
+                snake[0].position.x += snake[0].speed.x;
+                snake[0].position.y += snake[0].speed.y;
+            } else {
+                snake[i].position = snake_position[i - 1];
+            }
+        }
+    }
+
+    if (snake[0].position.x > SCREEN_WIDTH - offset.x or
+        snake[0].position.y > SCREEN_HEIGHT - offset.y or
+        snake[0].position.x < 0 or snake[0].position.y < 0) {
+        game_over = true;
+        return;
+    }
+
+    ++frame_counter;
 }
 
 var item_size: Types.Vec2 = { .x = Cpp.SQUARE_SZ, .y = Cpp.SQUARE_SZ };
@@ -80,51 +154,54 @@ fn draw_game()
 {
     Cpp.ClearBackground(bg_color);
 
-    if (not game_over) {
-        // draw grid
-        for (i: i32 in Core.Range(SCREEN_WIDTH / Cpp.SQUARE_SZ + 1)) {
-            var start: Cpp.Vector2;
-            var end: Cpp.Vector2;
-
-            start.x = (Cpp.SQUARE_SZ * i + offset.x / 2) as f32;
-            start.y = (offset.y / 2) as f32;
-            end.x = (Cpp.SQUARE_SZ * i + offset.x / 2) as f32;
-            end.y = (SCREEN_HEIGHT - offset.y / 2) as f32;
-            Cpp.DrawLineV(start, end, grid_color);
-        }
-
-        for (i: i32 in Core.Range(SCREEN_HEIGHT / Cpp.SQUARE_SZ + 1)) {
-            var start: Cpp.Vector2;
-            var end: Cpp.Vector2;
-
-            start.x = (offset.x / 2) as f32;
-            start.y = (Cpp.SQUARE_SZ * i + offset.y / 2) as f32;
-            end.x = (SCREEN_WIDTH - offset.x / 2) as f32;
-            end.y = (Cpp.SQUARE_SZ * i + offset.y / 2) as f32;
-            Cpp.DrawLineV(start, end, grid_color);
-        }
-
-        for (var snek: Types.Snake in snake) {
-            Cpp.DrawRectangleV(snek.position as Cpp.Vector2, item_size as
-                Cpp.Vector2, snek.color as Cpp.Color);
-        }
-
-        Cpp.DrawRectangleV(fruit.position as Cpp.Vector2, item_size as
-            Cpp.Vector2, fruit.color as Cpp.Color);
-
-        if (pause) {
-            Cpp.DrawText(Cpp.std.data("GAME PAUSED"),
-                SCREEN_WIDTH / 2 -
-                    Cpp.MeasureText(Cpp.std.data("GAME PAUSED"), 40) / 2,
-                SCREEN_HEIGHT / 2 - 40, 40, fg_color
-            );
-        }
-    } else {
+    if (game_over) {
         Cpp.DrawText(Cpp.std.data("PRESS [ENTER] TO PLAY AGAIN"),
             SCREEN_WIDTH / 2 -
                 Cpp.MeasureText(Cpp.std.data("PRESS [ENTER] TO PLAY AGAIN"),
                 20) / 2,
             SCREEN_HEIGHT / 2 - 20, 20, fg_color
+        );
+
+        return;
+    }
+
+    // draw grid
+    for (i: i32 in Core.Range(SCREEN_WIDTH / Cpp.SQUARE_SZ + 1)) {
+        var start: Cpp.Vector2;
+        var end: Cpp.Vector2;
+
+        start.x = (Cpp.SQUARE_SZ * i + offset.x / 2) as f32;
+        start.y = (offset.y / 2) as f32;
+        end.x = (Cpp.SQUARE_SZ * i + offset.x / 2) as f32;
+        end.y = (SCREEN_HEIGHT - offset.y / 2) as f32;
+        Cpp.DrawLineV(start, end, grid_color);
+    }
+
+    for (i: i32 in Core.Range(SCREEN_HEIGHT / Cpp.SQUARE_SZ + 1)) {
+        var start: Cpp.Vector2;
+        var end: Cpp.Vector2;
+
+        start.x = (offset.x / 2) as f32;
+        start.y = (Cpp.SQUARE_SZ * i + offset.y / 2) as f32;
+        end.x = (SCREEN_WIDTH - offset.x / 2) as f32;
+        end.y = (Cpp.SQUARE_SZ * i + offset.y / 2) as f32;
+        Cpp.DrawLineV(start, end, grid_color);
+    }
+
+    for (i: i32 in Core.Range(tail_counter)) {
+        var snek: Types.Snake = snake[i];
+        Cpp.DrawRectangleV(snek.position as Cpp.Vector2, item_size as
+            Cpp.Vector2, snek.color as Cpp.Color);
+    }
+
+    Cpp.DrawRectangleV(fruit.position as Cpp.Vector2, item_size as
+        Cpp.Vector2, fruit.color as Cpp.Color);
+
+    if (pause) {
+        Cpp.DrawText(Cpp.std.data("GAME PAUSED"),
+            SCREEN_WIDTH / 2 -
+                Cpp.MeasureText(Cpp.std.data("GAME PAUSED"), 40) / 2,
+            SCREEN_HEIGHT / 2 - 40, 40, fg_color
         );
     }
 }
