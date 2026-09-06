@@ -53,6 +53,7 @@ var fruit: Types.Food;
 var snake: array(Types.Snake, Cpp.SNAKE_LEN);
 var snake_position: array(Types.Vec2, Cpp.SNAKE_LEN);
 
+var allow_move: bool = false;
 var offset: Types.Vec2;
 var tail_counter: i32 = 1;
 
@@ -80,8 +81,6 @@ fn get_random_pos() -> Types.Vec2;
 
 fn update_game()
 {
-    var allow_move: bool = true;
-
     if (game_over) {
         if (Cpp.IsKeyPressed(Cpp.RL_KEY_ENTER)) {
             game_over = false;
@@ -126,11 +125,12 @@ fn update_game()
         snake_position[i] = snake[i].position;
     }
 
-    if (frame_counter % 7 == 0) {
+    if (frame_counter % 5 == 0) {
         for (i: i32 in Core.Range(tail_counter)) {
             if (i == 0) {
                 snake[0].position.x += snake[0].speed.x;
                 snake[0].position.y += snake[0].speed.y;
+                allow_move = true;
             } else {
                 snake[i].position = snake_position[i - 1];
             }
@@ -156,7 +156,7 @@ fn update_game()
         fruit.active = true;
         fruit.position = get_random_pos();
 
-        var i: i32;
+        var i: i32 = 0;
         while (i < tail_counter) {
             while (fruit.position.x == snake[i].position.x and
                 fruit.position.y == snake[i].position.y)
@@ -273,6 +273,7 @@ fn init_game()
     pause = false;
 
     tail_counter = 1;
+    allow_move = true;
 
     offset.x = SCREEN_WIDTH % Cpp.SQUARE_SZ;
     offset.y = SCREEN_HEIGHT % Cpp.SQUARE_SZ;
