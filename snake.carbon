@@ -11,6 +11,30 @@ import Cpp inline '''
 #define SQUARE_SZ 31
 ''';
 
+impl Types.Vec2 as Core.As(Cpp.Vector2) {
+    fn Convert(self) -> Cpp.Vector2
+    {
+        var vec: Cpp.Vector2;
+        vec.x = self.x as f32;
+        vec.y = self.y as f32;
+
+        return vec;
+    }
+}
+
+impl Types.Color as Core.As(Cpp.Color) {
+    fn Convert(self) -> Cpp.Color
+    {
+        var color: Cpp.Color;
+        color.r = self.r;
+        color.g = self.g;
+        color.b = self.b;
+        color.a = self.a;
+
+        return color;
+    }
+}
+
 let SCREEN_WIDTH: i32 = 800;
 let SCREEN_HEIGHT: i32 = 450;
 
@@ -47,7 +71,9 @@ fn Run() {
     Cpp.CloseWindow();
 }
 
+var item_size: Types.Vec2 = { .x = Cpp.SQUARE_SZ, .y = Cpp.SQUARE_SZ };
 var bg_color: Cpp.Color;
+var fg_color: Cpp.Color;
 var grid_color: Cpp.Color;
 
 fn draw_game()
@@ -77,7 +103,29 @@ fn draw_game()
             end.y = (Cpp.SQUARE_SZ * i + offset.y / 2) as f32;
             Cpp.DrawLineV(start, end, grid_color);
         }
+
+        for (var snek: Types.Snake in snake) {
+            Cpp.DrawRectangleV(snek.position as Cpp.Vector2, item_size as
+                Cpp.Vector2, snek.color as Cpp.Color);
+        }
+
+        Cpp.DrawRectangleV(fruit.position as Cpp.Vector2, item_size as
+            Cpp.Vector2, fruit.color as Cpp.Color);
+
+        if (pause) {
+            Cpp.DrawText(Cpp.std.data("GAME PAUSED"),
+                SCREEN_WIDTH / 2 -
+                    Cpp.MeasureText(Cpp.std.data("GAME PAUSED"), 40) / 2,
+                SCREEN_HEIGHT / 2 - 40, 40, fg_color
+            );
+        }
     } else {
+        Cpp.DrawText(Cpp.std.data("PRESS [ENTER] TO PLAY AGAIN"),
+            SCREEN_WIDTH / 2 -
+                Cpp.MeasureText(Cpp.std.data("PRESS [ENTER] TO PLAY AGAIN"),
+                20) / 2,
+            SCREEN_HEIGHT / 2 - 20, 20, fg_color
+        );
     }
 }
 
@@ -87,6 +135,11 @@ fn init_game()
     bg_color.g = 245;
     bg_color.b = 245;
     bg_color.a = 255;
+
+    fg_color.r = 130;
+    fg_color.g = 130;
+    fg_color.b = 130;
+    fg_color.a = 255;
 
     grid_color.r = 200;
     grid_color.g = 200;
@@ -101,9 +154,9 @@ fn init_game()
         snake[i].speed = { .x = Cpp.SQUARE_SZ, .y = 0 };
 
         if (i == 0) {
-            snake[i].color = { .r = 137, .g = 224, .b = 81, .a = 255 };
-        } else {
             snake[i].color = { .r = 34, .g = 34, .b = 34, .a = 255 };
+        } else {
+            snake[i].color = { .r = 137, .g = 224, .b = 81, .a = 255 };
         }
     }
 
