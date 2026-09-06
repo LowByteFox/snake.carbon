@@ -76,6 +76,8 @@ fn Run() {
     Cpp.CloseWindow();
 }
 
+fn get_random_pos() -> Types.Vec2;
+
 fn update_game()
 {
     var allow_move: bool = true;
@@ -124,7 +126,7 @@ fn update_game()
         snake_position[i] = snake[i].position;
     }
 
-    if (frame_counter % 5 == 0) {
+    if (frame_counter % 7 == 0) {
         for (i: i32 in Core.Range(tail_counter)) {
             if (i == 0) {
                 snake[0].position.x += snake[0].speed.x;
@@ -142,7 +144,50 @@ fn update_game()
         return;
     }
 
+    for (i: i32 in Core.InclusiveRange(1, tail_counter - 1)) {
+        if (snake[0].position.x == snake[i].position.x and
+            snake[0].position.y == snake[i].position.y) {
+            game_over = true;
+            return;
+        }
+    }
+
+    if (not fruit.active) {
+        fruit.active = true;
+        fruit.position = get_random_pos();
+
+        var i: i32;
+        while (i < tail_counter) {
+            while (fruit.position.x == snake[i].position.x and
+                fruit.position.y == snake[i].position.y)
+            {
+                fruit.position = get_random_pos();
+                i = 0;
+            }
+            ++i;
+        }
+    }
+
+    if (snake[0].position.x < fruit.position.x + Cpp.SQUARE_SZ and
+        snake[0].position.x + Cpp.SQUARE_SZ > fruit.position.x and
+        snake[0].position.y < fruit.position.y + Cpp.SQUARE_SZ and
+        snake[0].position.y + Cpp.SQUARE_SZ > fruit.position.y) {
+        snake[tail_counter].position = snake_position[tail_counter - 1];
+        ++tail_counter;
+        fruit.active = false;
+    }
+
     ++frame_counter;
+}
+
+fn get_random_pos() -> Types.Vec2
+{
+    return {
+        .x = Cpp.GetRandomValue(0, SCREEN_WIDTH / Cpp.SQUARE_SZ - 1) *
+            Cpp.SQUARE_SZ + offset.x / 2,
+        .y = Cpp.GetRandomValue(0, SCREEN_HEIGHT / Cpp.SQUARE_SZ - 1) *
+            Cpp.SQUARE_SZ + offset.y / 2
+    };
 }
 
 var item_size: Types.Vec2 = { .x = Cpp.SQUARE_SZ, .y = Cpp.SQUARE_SZ };
@@ -223,6 +268,12 @@ fn init_game()
     grid_color.b = 200;
     grid_color.a = 255;
 
+    frame_counter = 0;
+    game_over = false;
+    pause = false;
+
+    tail_counter = 1;
+
     offset.x = SCREEN_WIDTH % Cpp.SQUARE_SZ;
     offset.y = SCREEN_HEIGHT % Cpp.SQUARE_SZ;
 
@@ -231,9 +282,9 @@ fn init_game()
         snake[i].speed = { .x = Cpp.SQUARE_SZ, .y = 0 };
 
         if (i == 0) {
-            snake[i].color = { .r = 34, .g = 34, .b = 34, .a = 255 };
-        } else {
             snake[i].color = { .r = 137, .g = 224, .b = 81, .a = 255 };
+        } else {
+            snake[i].color = { .r = 34, .g = 34, .b = 34, .a = 255 };
         }
     }
 
