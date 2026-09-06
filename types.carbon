@@ -5,8 +5,8 @@ package Types library "types";
 import Cpp library "raylib/include/raylib.h";
 
 class Vec2 {
-    var x: f32;
-    var y: f32;
+    var x: i32;
+    var y: i32;
 }
 
 impl Vec2 as Core.Default {
@@ -46,7 +46,6 @@ impl Color as Core.Copy {
 
 class Snake {
     var position: Vec2;
-    var size: Vec2;
     var speed: Vec2;
     var color: Color;
 }
@@ -56,7 +55,6 @@ impl Snake as Core.Default {
     {
         return {
             .position = { .x = 0, .y = 0 },
-            .size = { .x = 0, .y = 0 },
             .speed = { .x = 0, .y = 0 },
             .color = { .r = 0, .g = 0, .b = 0, .a = 0 },
         };
@@ -68,7 +66,6 @@ impl Snake as Core.Copy {
     {
         return {
             .position = self.position,
-            .size = self.size,
             .speed = self.speed,
             .color = self.color
         };
@@ -79,7 +76,6 @@ impl Snake as Core.UnformedInit {}
 
 class Food {
     var position: Vec2;
-    var size: Vec2;
     var active: bool;
     var color: Color;
 }
@@ -89,7 +85,6 @@ impl Food as Core.Default {
     {
         return {
             .position = { .x = 0, .y = 0 },
-            .size = { .x = 0, .y = 0 },
             .active = false,
             .color = { .r = 0, .g = 0, .b = 0, .a = 0 },
         };
